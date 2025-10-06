@@ -10,8 +10,12 @@ import {
   X,
   Calendar,
   User,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
-// import { apiService } from '../services/api';
+import { apiService } from '../services/api';
 
 const Content = () => {
   const [content, setContent] = useState([]);
@@ -19,6 +23,12 @@ const Content = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Modal viewer state
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewFiles, setPreviewFiles] = useState([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewTitle, setPreviewTitle] = useState('');
 
   useEffect(() => {
     loadContent();
@@ -31,49 +41,45 @@ const Content = () => {
   const loadContent = async () => {
     try {
       setIsLoading(true);
-      // Mock data - replace with actual API call
-      const mockContent = [
-        {
-          id: 1,
-          title: 'Mathematics Past Questions 2023',
-          uploader: 'Dr. Sarah Johnson',
-          type: 'past-question',
-          subject: 'Mathematics',
-          institution: 'University of Lagos',
-          year: 2023,
-          downloads: 245,
-          uploadedAt: '2024-12-15',
-          fileSize: '2.5 MB',
-          isApproved: true,
-        },
-        {
-          id: 2,
-          title: 'Physics Laboratory Manual',
-          uploader: 'Prof. Michael Chen',
-          type: 'assignment',
-          subject: 'Physics',
-          institution: 'Covenant University',
-          year: 2023,
-          downloads: 120,
-          uploadedAt: '2024-12-10',
-          fileSize: '5.2 MB',
-          isApproved: true,
-        },
-        {
-          id: 3,
-          title: 'Chemistry Quiz Solutions',
-          uploader: 'Dr. Aisha Okafor',
-          type: 'quiz',
-          subject: 'Chemistry',
-          institution: 'UNILAG',
-          year: 2023,
-          downloads: 89,
-          uploadedAt: '2024-12-08',
-          fileSize: '1.8 MB',
-          isApproved: false,
-        },
-      ];
-      setContent(mockContent);
+      const response = await apiService.getAllQuestions({
+        page: 1,
+        limit: 100,
+        // includeUnapproved: true, // Get all questions including unapproved
+      });
+
+      console.log('API Response:', response);
+
+      const transformedContent = response.questions.map((q) => ({
+        id: q._id,
+        title: q.courseTitle,
+        subject: q.courseCode,
+        institution: q.institution,
+        year: q.year || new Date(q.createdAt).getFullYear(),
+        uploader: q.uploadedBy?.name || q.uploadedBy?.email || 'Anonymous',
+        fileSize: formatFileSize(
+          q.images?.reduce((sum, img) => sum + (img.fileSize || 0), 0) || 0
+        ),
+        type: 'past-question',
+        isApproved: q.isApproved,
+        downloads: q.downloads || 0,
+        uploadedAt: q.createdAt,
+        // Build file URLs - adjust this based on your backend endpoint
+        files:
+          q.images?.map((img) => ({
+            id: img.fileId,
+            name: img.fileName,
+            size: img.fileSize,
+            type: img.mimeType,
+            // This URL format depends on your backend - adjust accordingly
+            url: img.url,
+            // Alternative if you have a different endpoint structure:
+            // url: `${apiService.baseURL}/questions/${q._id}/files/${img.fileId}`,
+          })) || [],
+        details: q.courseDetails,
+        tags: q.tags || [],
+      }));
+
+      setContent(transformedContent);
     } catch (error) {
       console.error('Failed to load content:', error);
     } finally {
@@ -81,10 +87,17 @@ const Content = () => {
     }
   };
 
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return '0 KB';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
   const filterContent = () => {
     let filtered = content;
 
-    // Filter by type
     if (selectedFilter !== 'all') {
       if (selectedFilter === 'pending') {
         filtered = filtered.filter((item) => !item.isApproved);
@@ -95,7 +108,6 @@ const Content = () => {
       }
     }
 
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(
         (item) =>
@@ -111,7 +123,7 @@ const Content = () => {
 
   const handleApproveContent = async (contentId) => {
     try {
-      //   await apiService.approveQuestion(contentId);
+      await apiService.approveQuestion(contentId);
       setContent(
         content.map((item) =>
           item.id === contentId ? { ...item, isApproved: true } : item
@@ -119,18 +131,61 @@ const Content = () => {
       );
     } catch (error) {
       console.error('Failed to approve content:', error);
+      alert('Failed to approve content');
     }
   };
 
   const handleDeleteContent = async (contentId) => {
     if (window.confirm('Are you sure you want to delete this content?')) {
       try {
-        // await apiService.deleteQuestion(contentId);
+        await apiService.deleteQuestion(contentId);
         setContent(content.filter((item) => item.id !== contentId));
       } catch (error) {
         console.error('Failed to delete content:', error);
+        alert('Failed to delete content');
       }
     }
+  };
+
+  // Open preview modal
+  const openPreview = (item) => {
+    if (item.files && item.files.length > 0) {
+      setPreviewFiles(item.files);
+      setPreviewIndex(0);
+      setPreviewTitle(item.title);
+      setIsPreviewOpen(true);
+    }
+  };
+
+  const closePreview = () => {
+    setIsPreviewOpen(false);
+    setPreviewFiles([]);
+    setPreviewIndex(0);
+  };
+
+  const nextFile = () => {
+    setPreviewIndex((prev) => (prev + 1) % previewFiles.length);
+  };
+
+  const prevFile = () => {
+    setPreviewIndex(
+      (prev) => (prev - 1 + previewFiles.length) % previewFiles.length
+    );
+  };
+
+  // Check if file is PDF
+  const isPDF = (file) => {
+    return (
+      file.type?.includes('pdf') || file.name?.toLowerCase().endsWith('.pdf')
+    );
+  };
+
+  // Check if file is image
+  const isImage = (file) => {
+    return (
+      file.type?.startsWith('image/') ||
+      /\.(jpg|jpeg|png|gif|bmp|webp|heic|heif)$/i.test(file.name)
+    );
   };
 
   const getTypeColor = (type) => {
@@ -155,11 +210,17 @@ const Content = () => {
   };
 
   if (isLoading) {
-    return <div className='loading'>Loading content...</div>;
+    return (
+      <div className='loading-container'>
+        <div className='spinner'></div>
+        <p>Loading content...</p>
+      </div>
+    );
   }
 
   const pendingCount = content.filter((item) => !item.isApproved).length;
   const approvedCount = content.filter((item) => item.isApproved).length;
+  const currentFile = previewFiles[previewIndex];
 
   return (
     <div className='content-page'>
@@ -200,9 +261,9 @@ const Content = () => {
             'all',
             'pending',
             'approved',
-            'past-question',
+            /* 'past-question',
             'assignment',
-            'quiz',
+            'quiz', */
           ].map((filter) => (
             <button
               key={filter}
@@ -242,7 +303,12 @@ const Content = () => {
                 </div>
               </div>
               <div className='content-actions'>
-                <button className='action-btn preview-btn' title='Preview'>
+                <button
+                  className='action-btn preview-btn'
+                  title='Preview'
+                  onClick={() => openPreview(item)}
+                  disabled={!item.files || item.files.length === 0}
+                >
                   <Eye size={16} />
                 </button>
                 <button
@@ -275,6 +341,46 @@ const Content = () => {
                 </div>
               </div>
             </div>
+
+            {/* File Thumbnails */}
+            {item.files && item.files.length > 0 && (
+              <div className='content-images'>
+                {item.files.slice(0, 4).map((file, idx) => (
+                  <div
+                    key={idx}
+                    className='content-image-preview'
+                    onClick={() => openPreview(item)}
+                  >
+                    {isPDF(file) ? (
+                      <div className='pdf-thumbnail'>
+                        <FileText size={32} />
+                        <span>PDF</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={file.url}
+                        alt={file.name}
+                        crossOrigin='anonymous' // ✅ Add this for CORS
+                        onError={(e) => {
+                          console.error('Failed to load image:', file.url); // ✅ Debug log
+                          e.target.onerror = null;
+                          e.target.src =
+                            'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23ddd"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">No Preview</text></svg>';
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+                {item.files.length > 4 && (
+                  <div
+                    className='more-images'
+                    onClick={() => openPreview(item)}
+                  >
+                    +{item.files.length - 4} more
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className='content-footer'>
               <div className='content-tags'>
@@ -339,9 +445,348 @@ const Content = () => {
         </div>
       )}
 
+      {/* Preview Modal */}
+      {isPreviewOpen && (
+        <div className='preview-modal' onClick={closePreview}>
+          <div className='preview-content' onClick={(e) => e.stopPropagation()}>
+            <div className='preview-header'>
+              <div className='preview-info'>
+                <h3>{previewTitle}</h3>
+                <p>
+                  {currentFile?.name} ({formatFileSize(currentFile?.size)}) -
+                  File {previewIndex + 1} of {previewFiles.length}
+                </p>
+              </div>
+              <button className='close-btn' onClick={closePreview}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className='preview-body'>
+              {currentFile && isPDF(currentFile) ? (
+                <iframe
+                  src={currentFile.url}
+                  className='pdf-viewer'
+                  title={currentFile.name}
+                />
+              ) : currentFile && isImage(currentFile) ? (
+                <img
+                  src={currentFile.url}
+                  alt={currentFile.name}
+                  className='image-viewer'
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.parentElement.innerHTML = `<div class="error-message"><FileText size={48} /><p>Unable to load image</p><small>${currentFile.name}</small></div>`;
+                  }}
+                />
+              ) : (
+                <div className='error-message'>
+                  <FileText size={48} />
+                  <p>Preview not available</p>
+                  <a
+                    href={currentFile?.url}
+                    download
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='btn btn-primary'
+                  >
+                    <Download size={16} />
+                    Download File
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {previewFiles.length > 1 && (
+              <div className='preview-controls'>
+                <button className='nav-btn' onClick={prevFile}>
+                  <ChevronLeft size={24} />
+                </button>
+                <div className='preview-dots'>
+                  {previewFiles.map((_, idx) => (
+                    <span
+                      key={idx}
+                      className={`dot ${idx === previewIndex ? 'active' : ''}`}
+                      onClick={() => setPreviewIndex(idx)}
+                    />
+                  ))}
+                </div>
+                <button className='nav-btn' onClick={nextFile}>
+                  <ChevronRight size={24} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         .content-page {
           animation: fadeInUp 0.6s ease-out;
+        }
+
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 400px;
+          gap: 16px;
+        }
+
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 4px solid rgba(255, 107, 53, 0.2);
+          border-top-color: #ff6b35;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .content-images {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .content-image-preview {
+          width: 100%;
+          aspect-ratio: 1;
+          border-radius: 8px;
+          border: 2px solid rgba(229, 231, 235, 0.5);
+          cursor: pointer;
+          transition: all 0.2s;
+          overflow: hidden;
+          background: #f9fafb;
+        }
+
+        .content-image-preview img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .content-image-preview:hover {
+          transform: scale(1.05);
+          border-color: #ff6b35;
+          box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
+        }
+
+        .pdf-thumbnail {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          color: #ef4444;
+          font-size: 10px;
+          font-weight: 600;
+        }
+
+        .more-images {
+          width: 100%;
+          aspect-ratio: 1;
+          border-radius: 8px;
+          background: rgba(107, 114, 128, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: 600;
+          color: #6b7280;
+          cursor: pointer;
+          border: 2px solid rgba(229, 231, 235, 0.5);
+          transition: all 0.2s;
+        }
+
+        .more-images:hover {
+          background: rgba(255, 107, 53, 0.1);
+          color: #ff6b35;
+          border-color: #ff6b35;
+        }
+
+        /* Preview Modal */
+        .preview-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.95);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        .preview-content {
+          background: white;
+          border-radius: 16px;
+          width: 100%;
+          max-width: 1200px;
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        .preview-header {
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .preview-info h3 {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin-bottom: 4px;
+        }
+
+        .preview-info p {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .close-btn {
+          background: rgba(107, 114, 128, 0.1);
+          border: none;
+          border-radius: 8px;
+          padding: 8px;
+          cursor: pointer;
+          color: #6b7280;
+          transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+          background: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+        }
+
+        .preview-body {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          background: #f9fafb;
+          padding: 20px;
+        }
+
+        .image-viewer {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          border-radius: 8px;
+        }
+
+        .pdf-viewer {
+          width: 100%;
+          height: 100%;
+          border: none;
+          border-radius: 8px;
+        }
+
+        .error-message {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+          color: #6b7280;
+          text-align: center;
+        }
+
+        .error-message p {
+          font-size: 16px;
+          font-weight: 600;
+        }
+
+        .error-message small {
+          font-size: 12px;
+          color: #9ca3af;
+        }
+
+        .preview-controls {
+          padding: 16px 24px;
+          border-top: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+
+        .nav-btn {
+          background: rgba(107, 114, 128, 0.1);
+          border: none;
+          border-radius: 8px;
+          padding: 12px;
+          cursor: pointer;
+          color: #6b7280;
+          transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+          background: rgba(255, 107, 53, 0.1);
+          color: #ff6b35;
+        }
+
+        .preview-dots {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #d1d5db;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .dot.active {
+          background: #ff6b35;
+          width: 24px;
+          border-radius: 4px;
+        }
+
+        .dot:hover {
+          background: #ff6b35;
         }
 
         .page-header {
@@ -524,7 +969,12 @@ const Content = () => {
           transition: all 0.3s ease;
         }
 
-        .preview-btn:hover {
+        .action-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .preview-btn:hover:not(:disabled) {
           background: rgba(45, 93, 204, 0.1);
           color: #2d5dcc;
           transform: scale(1.1);
@@ -688,6 +1138,10 @@ const Content = () => {
           .meta-grid {
             grid-template-columns: 1fr;
           }
+
+          .preview-content {
+            max-height: 95vh;
+          }
         }
 
         @media (max-width: 640px) {
@@ -704,9 +1158,19 @@ const Content = () => {
           .filter-tabs {
             justify-content: center;
           }
+
+          .preview-modal {
+            padding: 0;
+          }
+
+          .preview-content {
+            border-radius: 0;
+            max-height: 100vh;
+          }
         }
       `}</style>
     </div>
   );
 };
+
 export default Content;

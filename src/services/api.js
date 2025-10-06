@@ -86,7 +86,9 @@ class ApiService {
 
   // Content management
   async getAllQuestions(params = {}) {
-    return this.request(`/questions?${new URLSearchParams(params)}`);
+    return this.request(
+      `/questions/all-questions?${new URLSearchParams(params)}`
+    );
   }
 
   async approveQuestion(questionId) {
@@ -96,7 +98,7 @@ class ApiService {
   }
 
   async deleteQuestion(questionId) {
-    return this.request(`/questions/${questionId}`, {
+    return this.request(`/questions/${questionId}/delete`, {
       method: 'DELETE',
     });
   }
