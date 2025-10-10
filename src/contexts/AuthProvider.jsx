@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      console.log(email);
+      // console.log(email);
       setError(null);
       setIsLoading(true);
 

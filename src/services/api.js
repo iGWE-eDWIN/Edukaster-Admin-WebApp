@@ -83,6 +83,33 @@ class ApiService {
       method: 'DELETE',
     });
   }
+  async fundWallet(userId, amount) {
+    return this.request(`/wallet/admin-fund/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    });
+  }
+
+  async changeSubscription(userId, plan) {
+    return this.request(`/admin-subscribe/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ plan }),
+    });
+  }
+
+  async resetPassword(userId, newPassword) {
+    return this.request(`/users/${userId}/password`, {
+      method: 'PATCH',
+      body: JSON.stringify({ newPassword }),
+    });
+  }
+
+  async changeRole(userId, role) {
+    return this.request(`/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  }
 
   // Content management
   async getAllQuestions(params = {}) {
