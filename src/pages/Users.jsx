@@ -938,6 +938,63 @@ const Users = () => {
                   )}
                 </>
               )}
+
+              {/* {user.role === 'tutor' && (
+                <>
+                  <div className='stat-row'>
+                    <span className='stat-label'>Rating:</span>
+                    <span className='stat-value rating'>
+                      ⭐ {user.rating > 0 ? user.rating : 'No ratings'}
+                    </span>
+                  </div>
+
+                  <div className='stat-row'>
+                    <span className='stat-label'>Earnings:</span>
+                    <span className='stat-value earnings'>
+                      {formatCurrency(user.totalEarnings)}
+                    </span>
+                  </div>
+
+                  <div className='stat-row'>
+                    <span className='stat-label'>Tutor Fee:</span>
+                    <input
+                      type='number'
+                      value={user.tutorFee || ''}
+                      onChange={(e) => {
+                        const newFee = e.target.value;
+                        setUsers((prev) =>
+                          prev.map((u) =>
+                            u._id === user._id ? { ...u, tutorFee: newFee } : u
+                          )
+                        );
+                      }}
+                      placeholder='Enter fee'
+                      style={{
+                        width: '100%',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid #d1d5db',
+                        fontSize: '13px',
+                      }}
+                    />
+                  </div>
+
+                  <div className='stat-row'>
+                    <button
+                      className='btn btn-primary'
+                      onClick={() => handleSetTutorFee(user._id, user.tutorFee)}
+                    >
+                      Save Fee
+                    </button>
+                  </div>
+
+                  <div className='stat-row'>
+                    <span className='stat-label'>Sessions:</span>
+                    <span className='stat-value'>{user.totalSessions}</span>
+                  </div>
+                </>
+              )} */}
+
               {user.role === 'student' && (
                 <>
                   <div className='stat-row'>

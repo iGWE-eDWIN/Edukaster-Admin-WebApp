@@ -111,6 +111,13 @@ class ApiService {
     });
   }
 
+  async updateTutorFee(userId, adminFee) {
+    return this.request(`/users/${userId}/fee`, {
+      method: 'PUT',
+      body: JSON.stringify({ adminFee }),
+    });
+  }
+
   // Content management
   async getAllQuestions(params = {}) {
     return this.request(
@@ -127,6 +134,20 @@ class ApiService {
   async deleteQuestion(questionId) {
     return this.request(`/questions/${questionId}/delete`, {
       method: 'DELETE',
+    });
+  }
+
+  // Booking management
+
+  async getPendingBookings(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/bookings/pending?${queryString}`);
+  }
+
+  async approveBooking(bookingId, meetingLink) {
+    return this.request(`/bookings/${bookingId}/approve`, {
+      method: 'PATCH',
+      body: JSON.stringify({ meetingLink }),
     });
   }
 

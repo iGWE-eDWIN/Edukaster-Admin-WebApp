@@ -32,6 +32,7 @@ const UserDetailsModal = ({
 
   const subscriptionPlans = ['free', 'scholar-life', 'edu-pro'];
   const roles = ['student', 'tutor', 'admin'];
+  const [tutorFee, setTutorFee] = useState(user.tutorFee || '');
 
   const getRoleColor = (role) => {
     switch (role) {
@@ -182,6 +183,40 @@ const UserDetailsModal = ({
     } catch (err) {
       setError('Failed to change role');
       console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateTutorFee = async () => {
+    // console.log(tutorFee);
+    if (user.role !== 'tutor') {
+      setError('Tutor fee can only be updated for tutor accounts');
+      return;
+    }
+
+    if (!tutorFee || isNaN(tutorFee) || parseFloat(tutorFee) <= 0) {
+      setError('Please enter a valid tutor fee amount');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      const response = await apiService.updateTutorFee(user._id, tutorFee);
+      if (response.data) {
+        onUpdate(response.data);
+        setSuccess(
+          `Tutor fee updated successfully to ₦${parseFloat(
+            tutorFee
+          ).toLocaleString()}`
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Failed to update tutor fee');
     } finally {
       setLoading(false);
     }
@@ -440,13 +475,40 @@ const UserDetailsModal = ({
                 </>
               )}
 
-              {user.role === 'tutor' && (
+              {/* {user.role === 'tutor' && (
                 <div className='action-info'>
                   <AlertCircle size={24} />
                   <p>
                     Wallet funding and subscription management are only
                     available for student users.
                   </p>
+                </div>
+              )} */}
+              {user.role === 'tutor' && (
+                <div className='action-card'>
+                  <div className='action-header'>
+                    <DollarSign size={24} />
+                    <h3>Set Tutor Fee</h3>
+                  </div>
+                  <p>Set or update this tutor’s fee per session</p>
+                  <div className='action-form'>
+                    <input
+                      type='number'
+                      placeholder='Enter fee (₦)'
+                      value={tutorFee}
+                      onChange={(e) => setTutorFee(e.target.value)}
+                      className='input'
+                      min='0'
+                      step='100'
+                    />
+                    <button
+                      className='btn btn-primary'
+                      onClick={handleUpdateTutorFee}
+                      disabled={loading}
+                    >
+                      {loading ? 'Saving...' : 'Save Fee'}
+                    </button>
+                  </div>
                 </div>
               )}
 
