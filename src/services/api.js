@@ -1,6 +1,9 @@
 // const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'https://edukasterserver.onrender.com';
+  import.meta.env.VITE_API_URL ||
+  'https://edukaster-server-8b325837bf8a.herokuapp.com';
+
+// 'https://edukasterserver.onrender.com';
 
 class ApiService {
   constructor() {

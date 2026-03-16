@@ -40,6 +40,7 @@ export function AuthProvider({ children }) {
       setIsLoading(true);
 
       const response = await apiService.login({ email, password });
+      // console.log(response);
 
       if (response.user.role !== 'admin') {
         throw new Error('Access denied. Admin privileges required.');
