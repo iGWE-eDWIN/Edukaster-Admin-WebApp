@@ -1,7 +1,7 @@
 // const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
-  'https://edukaster-server-8b325837bf8a.herokuapp.com';
+  'https://edukaster-server-9f4ff1bbef10.herokuapp.com';
 
 // 'https://edukasterserver.onrender.com';
 
@@ -116,10 +116,17 @@ class ApiService {
     });
   }
 
-  async updateTutorFee(userId, adminFee) {
-    return this.request(`/users/${userId}/fee`, {
+  // async updateTutorFee(userId, adminFee) {
+  //   return this.request(`/users/${userId}/fee`, {
+  //     method: 'PUT',
+  //     body: JSON.stringify({ adminFee }),
+  //   });
+  // }
+
+  async setTutorAdminFee(percentage) {
+    return this.request(`/users/tutor-fees`, {
       method: 'PUT',
-      body: JSON.stringify({ adminFee }),
+      body: JSON.stringify({ adminFee: Number(percentage) }),
     });
   }
 

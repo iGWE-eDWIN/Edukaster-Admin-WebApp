@@ -703,6 +703,10 @@ const Users = () => {
   const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [adminPercentage, setAdminPercentage] = useState('');
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState(null);
+  const [adminSuccess, setAdminSuccess] = useState(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -760,6 +764,28 @@ const Users = () => {
         console.error('Failed to delete user:', error);
         setError('Could not delete user.');
       }
+    }
+  };
+
+  const handleApplyAdminPercentage = async () => {
+    if (!adminPercentage || isNaN(adminPercentage) || Number(adminPercentage) < 0) {
+      setAdminError('Enter a valid percentage');
+      return;
+    }
+    if (!window.confirm(`Apply ${adminPercentage}% commission to all tutors?`)) return;
+    try {
+      setAdminLoading(true);
+      setAdminError(null);
+      setAdminSuccess(null);
+      await apiService.setTutorAdminFee(Number(adminPercentage));
+      setAdminSuccess(`Applied ${adminPercentage}% commission to all tutors`);
+      setAdminPercentage('');
+      await loadUsers();
+    } catch (err) {
+      console.error(err);
+      setAdminError(err.message || 'Failed to apply commission');
+    } finally {
+      setAdminLoading(false);
     }
   };
 
@@ -856,6 +882,26 @@ const Users = () => {
               {filter !== 'all' && 's'}
             </button>
           ))}
+        </div>
+        <div className='global-fee'>
+          <input
+            type='number'
+            min='0'
+            max='100'
+            placeholder='Commission %'
+            value={adminPercentage}
+            onChange={(e) => setAdminPercentage(e.target.value)}
+            className='input small'
+          />
+          <button
+            className='btn btn-primary'
+            onClick={handleApplyAdminPercentage}
+            disabled={adminLoading}
+          >
+            {adminLoading ? 'Applying...' : 'Apply to Tutors'}
+          </button>
+          {adminError && <div className='small-error'>{adminError}</div>}
+          {adminSuccess && <div className='small-success'>{adminSuccess}</div>}
         </div>
       </div>
 
@@ -1385,6 +1431,26 @@ const Users = () => {
         .empty-state p {
           color: #6b7280;
           font-size: 16px;
+        }
+
+        .global-fee {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+        .input.small {
+          width: 120px;
+          padding: 8px;
+        }
+        .small-error {
+          color: #b91c1c;
+          font-size: 13px;
+          margin-left: 8px;
+        }
+        .small-success {
+          color: #065f46;
+          font-size: 13px;
+          margin-left: 8px;
         }
 
         @media (max-width: 1024px) {

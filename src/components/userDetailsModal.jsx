@@ -484,7 +484,7 @@ const UserDetailsModal = ({
                   </p>
                 </div>
               )} */}
-              {user.role === 'tutor' && (
+              {/* {user.role === 'tutor' && (
                 <div className='action-card'>
                   <div className='action-header'>
                     <DollarSign size={24} />
@@ -510,7 +510,7 @@ const UserDetailsModal = ({
                     </button>
                   </div>
                 </div>
-              )}
+              )} */}
 
               <div className='action-card'>
                 <div className='action-header'>
